@@ -1,15 +1,22 @@
 # core
 
-To install dependencies:
+Core service for product data crawling with `Hono + Crawlee` on Bun runtime.
+
+## Install
 
 ```bash
 bun install
 ```
 
-To run:
+## Run
 
 ```bash
-bun run index.ts
+bun run dev
 ```
 
-This project was created using `bun init` in bun v1.2.15. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+## Routes
+
+- `GET /` -> service info
+- `GET /crawl/platforms` -> supported crawler platforms
+- `POST /crawl/platform/:platform` -> crawl one platform
+- `POST /crawl/run` -> crawl multiple platforms in parallel

@@ -2,6 +2,8 @@
   "name": "my-project",
   "version": "1.0.0",
   "workspaces": [
-    "packages/*", "apps/*", "core/*"
+    "packages/*",
+    "apps/*",
+    "core"
   ]
 }
