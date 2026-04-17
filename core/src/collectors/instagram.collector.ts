@@ -1,7 +1,7 @@
 import { PuppeteerCrawler, RequestQueue } from "crawlee";
 
 import { BaseCollector, type CollectorExecution } from "./base.collector.ts";
-import { autoScroll } from "./utils/puppeteer.utils.ts";
+import { autoScroll, sleep } from "./utils/puppeteer.utils.ts";
 import { extractExternalId, parseCompactNumber } from "./utils/text.utils.ts";
 import type { CrawlTask, ProductSeed, RawFeedbackItem } from "../types/crawl.types.ts";
 
@@ -54,7 +54,7 @@ export class InstagramCollector extends BaseCollector {
       },
       requestHandler: async ({ page, request }) => {
         const pageType = String(request.userData.pageType ?? "feed");
-        await page.waitForTimeout(1_500);
+        await sleep(1_500);
 
         if (pageType !== "post") {
           await autoScroll(page, maxScrollSteps);

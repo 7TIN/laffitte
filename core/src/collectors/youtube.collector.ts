@@ -1,7 +1,7 @@
 import { PuppeteerCrawler, RequestQueue } from "crawlee";
 
 import { BaseCollector, type CollectorExecution } from "./base.collector.ts";
-import { autoScroll } from "./utils/puppeteer.utils.ts";
+import { autoScroll, sleep } from "./utils/puppeteer.utils.ts";
 import { extractExternalId, parseCompactNumber } from "./utils/text.utils.ts";
 import type { CrawlTask, RawFeedbackItem } from "../types/crawl.types.ts";
 
@@ -115,7 +115,7 @@ export class YouTubeCollector extends BaseCollector {
           return;
         }
 
-        await page.waitForTimeout(1_200);
+        await sleep(1_200);
         await autoScroll(page, maxScrollSteps);
         await page.waitForSelector("ytd-comments", { timeout: 20_000 }).catch(() => undefined);
         await autoScroll(page, Math.max(4, Math.floor(maxScrollSteps / 2)));

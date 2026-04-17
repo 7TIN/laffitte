@@ -1,7 +1,7 @@
 import { PuppeteerCrawler, RequestQueue } from "crawlee";
 
 import { BaseCollector, type CollectorExecution } from "./base.collector.ts";
-import { autoScroll } from "./utils/puppeteer.utils.ts";
+import { autoScroll, sleep } from "./utils/puppeteer.utils.ts";
 import { extractExternalId, parseCompactNumber } from "./utils/text.utils.ts";
 import type { CrawlTask, RawFeedbackItem } from "../types/crawl.types.ts";
 
@@ -60,7 +60,7 @@ export class TwitterCollector extends BaseCollector {
       requestHandler: async ({ page, request }) => {
         const pageType = String(request.userData.pageType ?? "search");
 
-        await page.waitForTimeout(1_200);
+        await sleep(1_200);
         await autoScroll(page, maxScrollSteps);
 
         const domItems = await page.evaluate(() => {
