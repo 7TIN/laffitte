@@ -166,6 +166,10 @@ export class YouTubeCollector extends BaseCollector {
             continue;
           }
 
+          if (!this.withinDuration(task, comment.postedAt)) {
+            continue;
+          }
+
           items.push(
             this.createItem(
               task,

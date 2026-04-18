@@ -3,15 +3,22 @@
 This is the first backend core for data collection.  
 It supports static crawling with `CheerioCrawler` and JS-heavy crawling with `PuppeteerCrawler`.
 
+Notes:
+- `productName`, `keywords`, `aliases`, `hashtags`, and `socialHandles` are optional inputs.
+- In search-term matching, `socialHandles` are treated as brand metadata, not as mandatory search constraints.
+- `durationHours` is supported to keep results recent (for example: `1`, `10`, `24`).
+
 ## Supported Platforms
 
 - `web` (custom start URLs, static pages)
 - `news` (Google News search pages)
 - `reddit` (old.reddit search + comments)
-- `twitter` (X search + tweet detail pages)
 - `youtube` (search + video comments)
 - `instagram` (hashtag/profile feeds + post comments)
 - `amazon` (search + review pages)
+
+`twitter` is intentionally disabled by default because unauthenticated crawling is login-gated on X.
+Later, it can be re-enabled with paid API/integration (`ENABLE_TWITTER=true`).
 
 ## API Endpoints
 
@@ -35,7 +42,8 @@ It supports static crawling with `CheerioCrawler` and JS-heavy crawling with `Pu
     "maxItems": 120,
     "maxRequestsPerCrawl": 30,
     "includeReplies": true,
-    "maxScrollSteps": 8
+    "maxScrollSteps": 8,
+    "durationHours": 24
   }
 }
 ```
@@ -50,19 +58,18 @@ It supports static crawling with `CheerioCrawler` and JS-heavy crawling with `Pu
     "aliases": ["Coke", "Diet Coke"],
     "hashtags": ["#CocaCola"]
   },
-  "platforms": ["twitter", "reddit", "youtube", "news"],
+  "platforms": ["reddit", "youtube", "news", "instagram"],
   "optionsByPlatform": {
-    "twitter": {
-      "maxItems": 150,
-      "includeReplies": true,
-      "maxScrollSteps": 10
-    },
     "reddit": {
       "maxItems": 80
     },
     "news": {
       "locale": "en-US",
       "maxItems": 60
+    },
+    "instagram": {
+      "maxItems": 80,
+      "maxScrollSteps": 8
     }
   }
 }

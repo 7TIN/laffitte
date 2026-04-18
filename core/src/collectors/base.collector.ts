@@ -8,6 +8,7 @@ import type {
 import {
   buildSearchTerms,
   compactText,
+  isWithinDuration,
   matchesAnyProductTerm,
   stableItemId,
 } from "./utils/text.utils.ts";
@@ -60,6 +61,10 @@ export abstract class BaseCollector {
 
   protected maxRequests(task: CrawlTask): number {
     return task.options?.maxRequestsPerCrawl ?? this.defaultMaxRequestsPerCrawl;
+  }
+
+  protected withinDuration(task: CrawlTask, postedAt: string | null | undefined): boolean {
+    return isWithinDuration(postedAt, task.options?.durationHours);
   }
 
   protected createItem(task: CrawlTask, draft: RawFeedbackDraft, index: number): RawFeedbackItem {

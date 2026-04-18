@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import { listPlatforms } from "../collectors/index.ts";
+import { listDisabledPlatforms, listPlatforms } from "../collectors/index.ts";
 import { CollectorOrchestrator } from "../orchestrator/collector.orchestrator.ts";
 import type {
   CollectorOptions,
@@ -15,6 +15,7 @@ const orchestrator = new CollectorOrchestrator();
 crawlRoutes.get("/platforms", (c) => {
   return c.json({
     platforms: listPlatforms(),
+    disabledPlatforms: listDisabledPlatforms(),
   });
 });
 
@@ -35,10 +36,7 @@ crawlRoutes.post("/platform/:platform", async (c) => {
     return c.json({ error: "invalid JSON body" }, 400);
   }
 
-  const product = parseProductSeed(body.product ?? body);
-  if (!product) {
-    return c.json({ error: "body.product.productName is required" }, 400);
-  }
+  const product = parseProductSeed(body.product ?? body) ?? {};
 
   const result = await orchestrator.runSingle({
     runId: getRunId(body.runId),
@@ -56,10 +54,7 @@ crawlRoutes.post("/run", async (c) => {
     return c.json({ error: "invalid JSON body" }, 400);
   }
 
-  const product = parseProductSeed(body.product);
-  if (!product) {
-    return c.json({ error: "body.product.productName is required" }, 400);
-  }
+  const product = parseProductSeed(body.product ?? body) ?? {};
 
   const platforms = parsePlatforms(body.platforms);
   if (platforms.length === 0) {
@@ -97,16 +92,21 @@ function parsePlatforms(value: unknown): Platform[] {
 }
 
 function parseProductSeed(value: unknown): ProductSeed | null {
+  if (!value) {
+    return {};
+  }
+
   if (!isObject(value)) {
     return null;
   }
 
-  if (typeof value.productName !== "string" || value.productName.trim().length === 0) {
-    return null;
-  }
+  const productName =
+    typeof value.productName === "string" && value.productName.trim().length > 0
+      ? value.productName.trim()
+      : undefined;
 
   return {
-    productName: value.productName.trim(),
+    productName,
     aliases: asStringArray(value.aliases),
     socialHandles: asStringArray(value.socialHandles),
     hashtags: asStringArray(value.hashtags),
@@ -151,6 +151,9 @@ function parseCollectorOptions(value: unknown): CollectorOptions | undefined {
   }
   if (typeof value.locale === "string") {
     options.locale = value.locale;
+  }
+  if (typeof value.durationHours === "number" && Number.isFinite(value.durationHours)) {
+    options.durationHours = value.durationHours;
   }
   if (Array.isArray(value.startUrls)) {
     options.startUrls = value.startUrls.filter((entry): entry is string => typeof entry === "string");
@@ -198,4 +201,3 @@ function getRunId(input: unknown): string {
 }
 
 export { crawlRoutes };
-

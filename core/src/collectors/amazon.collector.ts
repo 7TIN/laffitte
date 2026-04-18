@@ -82,6 +82,10 @@ export class AmazonCollector extends BaseCollector {
             return;
           }
 
+          if (!this.withinDuration(task, postedAt)) {
+            return;
+          }
+
           items.push(
             this.createItem(
               task,

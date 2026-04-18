@@ -43,10 +43,15 @@ export class RedditCollector extends BaseCollector {
             const title = node.find(".search-title").first().text().trim();
             const text = node.find(".search-result-body").text().trim();
             const author = node.find(".search-author").first().text().trim();
+            const postedAt = node.find(".search-time").first().text().trim();
             const sourceUrl = node.find(".search-title").attr("href") ?? request.loadedUrl ?? request.url;
             const combined = `${title} ${text}`.trim();
 
             if (combined.length < 40 || !this.matchesProduct(combined, task.product)) {
+              return;
+            }
+
+            if (!this.withinDuration(task, postedAt)) {
               return;
             }
 
@@ -58,6 +63,7 @@ export class RedditCollector extends BaseCollector {
                   title: title || undefined,
                   text: combined,
                   author: author || undefined,
+                  postedAt: postedAt || undefined,
                   metadata: {
                     pageType: "search-result",
                   },
@@ -94,6 +100,10 @@ export class RedditCollector extends BaseCollector {
           const postedAt = node.find("time").attr("datetime");
           const sourceUrl = node.find("a.bylink").attr("href") ?? request.loadedUrl ?? request.url;
           if (text.length < 25 || !this.matchesProduct(text, task.product)) {
+            return;
+          }
+
+          if (!this.withinDuration(task, postedAt)) {
             return;
           }
 

@@ -17,15 +17,12 @@ export function compactText(input: string, maxLength = 1800): string {
 
 export function buildSearchTerms(product: ProductSeed): string[] {
   const terms = new Set<string>();
-  terms.add(product.productName);
+  if (typeof product.productName === "string") {
+    terms.add(product.productName);
+  }
 
   for (const value of product.aliases ?? []) {
     terms.add(value);
-  }
-
-  for (const value of product.socialHandles ?? []) {
-    terms.add(value);
-    terms.add(value.replace(/^@/, ""));
   }
 
   for (const value of product.hashtags ?? []) {
@@ -50,10 +47,85 @@ export function matchesAnyProductTerm(text: string, product: ProductSeed): boole
 
   const terms = buildSearchTerms(product);
   if (terms.length === 0) {
-    return false;
+    return true;
   }
 
   return terms.some((term) => source.includes(normalizeText(term)));
+}
+
+function parseRelativeTimeToMs(value: string): number | undefined {
+  const source = value.trim().toLowerCase();
+  if (source.length === 0) {
+    return undefined;
+  }
+
+  if (source === "now" || source === "just now") {
+    return Date.now();
+  }
+
+  const match = source.match(
+    /(\d+)\s*(second|minute|hour|day|week|month|year)s?\s+ago/,
+  );
+  if (!match) {
+    return undefined;
+  }
+
+  const amount = Number.parseInt(match[1], 10);
+  if (Number.isNaN(amount) || amount <= 0) {
+    return undefined;
+  }
+
+  const unit = match[2];
+  const multipliers: Record<string, number> = {
+    second: 1_000,
+    minute: 60_000,
+    hour: 3_600_000,
+    day: 86_400_000,
+    week: 604_800_000,
+    month: 2_592_000_000,
+    year: 31_536_000_000,
+  };
+
+  const multiplier = multipliers[unit];
+  if (!multiplier) {
+    return undefined;
+  }
+
+  return Date.now() - amount * multiplier;
+}
+
+export function parseDateLike(value: string | null | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const direct = Date.parse(value);
+  if (!Number.isNaN(direct)) {
+    return direct;
+  }
+
+  return parseRelativeTimeToMs(value);
+}
+
+export function isWithinDuration(
+  postedAt: string | null | undefined,
+  durationHours: number | null | undefined,
+): boolean {
+  if (!durationHours || durationHours <= 0) {
+    return true;
+  }
+
+  if (!postedAt) {
+    return true;
+  }
+
+  const parsed = parseDateLike(postedAt);
+  if (!parsed) {
+    return true;
+  }
+
+  const threshold = Date.now() - durationHours * 3_600_000;
+  return parsed >= threshold;
 }
 
 export function stableItemId(
@@ -112,4 +184,3 @@ export function parseCompactNumber(value: string | null | undefined): number | u
 
   return Math.round(numeric);
 }
-

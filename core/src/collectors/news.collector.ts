@@ -58,11 +58,16 @@ export class NewsCollector extends BaseCollector {
           const node = $(element);
           const title = node.find("h3, h4").first().text().trim();
           const snippet = node.find("span").text().trim();
+          const postedAt = node.find("time").attr("datetime") ?? node.find("time").text().trim();
           const href = node.find("a").first().attr("href");
           const sourceUrl = this.normalizeUrl(href, request.loadedUrl ?? request.url);
           const text = `${title} ${snippet}`.trim();
 
           if (!sourceUrl || text.length < 40 || !this.matchesProduct(text, task.product)) {
+            return;
+          }
+
+          if (!this.withinDuration(task, postedAt)) {
             return;
           }
 
@@ -73,6 +78,7 @@ export class NewsCollector extends BaseCollector {
                 sourceUrl,
                 title: title || undefined,
                 text,
+                postedAt: postedAt || undefined,
                 metadata: {
                   source: "news.google.com",
                 },

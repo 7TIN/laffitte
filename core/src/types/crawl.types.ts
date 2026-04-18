@@ -8,7 +8,7 @@ export type Platform =
   | "amazon";
 
 export interface ProductSeed {
-  productName: string;
+  productName?: string | undefined;
   aliases?: string[] | undefined;
   socialHandles?: string[] | undefined;
   hashtags?: string[] | undefined;
@@ -22,6 +22,7 @@ export interface CollectorOptions {
   includeReplies?: boolean | undefined;
   maxScrollSteps?: number | undefined;
   locale?: string | undefined;
+  durationHours?: number | undefined;
 }
 
 export interface CrawlTask {

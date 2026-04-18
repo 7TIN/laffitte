@@ -20,17 +20,13 @@ export class TwitterCollector extends BaseCollector {
 
   protected async collectInternal(task: CrawlTask): Promise<CollectorExecution> {
     const terms = this.getSearchTerms(task.product);
-    const query = terms.slice(0, 3).join(" OR ");
-    const startUrls =
-      task.options?.startUrls ??
-      (query.length > 0
-        ? [`https://x.com/search?q=${encodeURIComponent(query)}&src=typed_query&f=live`]
-        : []);
+    const query = this.buildSearchQuery(terms, task.options?.durationHours);
+    const startUrls = task.options?.startUrls ?? (query.length > 0 ? [this.buildSearchUrl(query)] : []);
 
     if (startUrls.length === 0) {
       return {
         items: [],
-        warnings: ["twitter collector could not build any search URL"],
+        warnings: ["twitter collector needs at least one search term (product/keywords) or options.startUrls"],
       };
     }
 
@@ -65,24 +61,62 @@ export class TwitterCollector extends BaseCollector {
 
         const domItems = await page.evaluate(() => {
           const cards = Array.from(document.querySelectorAll("article[data-testid='tweet']"));
-          return cards.slice(0, 35).map((card) => {
-            const text = Array.from(card.querySelectorAll("div[data-testid='tweetText'] span"))
+          const extractText = (card: Element): string => {
+            const direct = card.querySelector("div[data-testid='tweetText']")?.textContent?.trim();
+            if (direct && direct.length > 0) {
+              return direct;
+            }
+
+            const languageNodes = Array.from(card.querySelectorAll("[lang]"))
               .map((node) => node.textContent ?? "")
               .join(" ")
+              .replace(/\s+/g, " ")
               .trim();
-            const author = card.querySelector("div[data-testid='User-Name'] span")?.textContent?.trim();
+            if (languageNodes.length > 0) {
+              return languageNodes;
+            }
+
+            return ((card as HTMLElement).innerText ?? "")
+              .replace(/\s+/g, " ")
+              .trim();
+          };
+
+          return cards.slice(0, 45).map((card) => {
+            const text = extractText(card);
+            const author =
+              card.querySelector("div[data-testid='User-Name'] span")?.textContent?.trim() ??
+              card.querySelector("a[role='link'][href*='/status/']")?.getAttribute("href")?.split("/")[1];
             const statusAnchor = card.querySelector<HTMLAnchorElement>("a[href*='/status/']");
             const statusUrl = statusAnchor?.href;
             const postedAt = card.querySelector("time")?.getAttribute("datetime") ?? undefined;
-            const likes = card.querySelector("button[data-testid='like'] span")?.textContent ?? undefined;
-            const replies = card.querySelector("button[data-testid='reply'] span")?.textContent ?? undefined;
-            const reposts = card.querySelector("button[data-testid='retweet'] span")?.textContent ?? undefined;
+            const likes =
+              card.querySelector("[data-testid='like']")?.textContent?.trim() ?? undefined;
+            const replies =
+              card.querySelector("[data-testid='reply']")?.textContent?.trim() ?? undefined;
+            const reposts =
+              card.querySelector("[data-testid='retweet']")?.textContent?.trim() ?? undefined;
             return { text, author, statusUrl, postedAt, likes, replies, reposts };
           });
         });
 
+        if (domItems.length === 0) {
+          const maybeLoginWall = await page.evaluate(() =>
+            document.body?.innerText?.toLowerCase().includes("log in") ?? false,
+          );
+          warnings.push(
+            maybeLoginWall
+              ? `twitter collector hit login wall: ${request.loadedUrl ?? request.url}`
+              : `twitter collector found no visible tweet cards: ${request.loadedUrl ?? request.url}`,
+          );
+        }
+
         for (const domItem of domItems as TwitterDomItem[]) {
-          if (domItem.text.length < 20 || !this.matchesProduct(domItem.text, task.product)) {
+          const normalizedText = domItem.text.replace(/\s+/g, " ").trim();
+          if (normalizedText.length < 8) {
+            continue;
+          }
+
+          if (!this.withinDuration(task, domItem.postedAt)) {
             continue;
           }
 
@@ -92,7 +126,7 @@ export class TwitterCollector extends BaseCollector {
               task,
               {
                 sourceUrl,
-                text: domItem.text,
+                text: normalizedText,
                 author: domItem.author,
                 postedAt: domItem.postedAt,
                 externalId: extractExternalId(sourceUrl, "tweet"),
@@ -138,6 +172,12 @@ export class TwitterCollector extends BaseCollector {
     });
 
     await crawler.run();
+    if (items.length === 0) {
+      warnings.push(
+        "twitter collector returned 0 items; if this keeps happening, X is likely rate-limited/login-gated for unauthenticated crawling.",
+      );
+    }
+
     return { items, warnings };
   }
 
@@ -155,5 +195,39 @@ export class TwitterCollector extends BaseCollector {
     } catch {
       return baseUrl;
     }
+  }
+
+  private buildSearchQuery(terms: string[], durationHours: number | undefined): string {
+    const filteredTerms = terms
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0)
+      .slice(0, 5)
+      .map((value) => (/\s/.test(value) ? `"${value}"` : value));
+
+    if (filteredTerms.length === 0) {
+      return "";
+    }
+
+    const parts: string[] = [filteredTerms.join(" OR "), "-is:retweet"];
+
+    const sinceDate = this.buildSinceDate(durationHours);
+    if (sinceDate) {
+      parts.push(`since:${sinceDate}`);
+    }
+
+    return parts.join(" ").trim();
+  }
+
+  private buildSearchUrl(query: string): string {
+    return `https://x.com/search?q=${encodeURIComponent(query)}&src=typed_query&f=live`;
+  }
+
+  private buildSinceDate(durationHours: number | undefined): string | undefined {
+    if (!durationHours || durationHours <= 0) {
+      return undefined;
+    }
+
+    const since = new Date(Date.now() - durationHours * 3_600_000);
+    return since.toISOString().slice(0, 10);
   }
 }

@@ -18,12 +18,33 @@ const collectorMap: Record<Platform, BaseCollector> = {
   amazon: new AmazonCollector(),
 };
 
+function isTwitterEnabled(): boolean {
+  return process.env.ENABLE_TWITTER === "true";
+}
+
 export function getCollector(platform: Platform): BaseCollector {
+  if (platform === "twitter" && !isTwitterEnabled()) {
+    throw new Error(
+      'twitter collector is disabled by default (X login wall). Set ENABLE_TWITTER=true only if you are using official API/integration.',
+    );
+  }
+
   return collectorMap[platform];
 }
 
 export function listPlatforms(): Platform[] {
-  return Object.keys(collectorMap) as Platform[];
+  return (Object.keys(collectorMap) as Platform[]).filter(
+    (platform) => platform !== "twitter" || isTwitterEnabled(),
+  );
+}
+
+export function listDisabledPlatforms(): Platform[] {
+  const disabled: Platform[] = [];
+  if (!isTwitterEnabled()) {
+    disabled.push("twitter");
+  }
+
+  return disabled;
 }
 
 export {
@@ -36,4 +57,3 @@ export {
   WebCollector,
   YouTubeCollector,
 };
-
