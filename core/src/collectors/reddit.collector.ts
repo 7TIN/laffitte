@@ -35,6 +35,7 @@ export class RedditCollector extends BaseCollector {
       requestQueue: queue,
       maxRequestsPerCrawl: this.maxRequests(task),
       requestHandlerTimeoutSecs: 45,
+      preNavigationHooks: this.getCheerioPreNavigationHooks(),
       requestHandler: async ({ $, request }) => {
         const pageType = String(request.userData.pageType ?? "search");
         if (pageType === "search") {

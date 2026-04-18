@@ -30,7 +30,7 @@ Later, they can be re-enabled with compliant integrations:
 - `POST /crawl/platform/:platform`
 - `POST /crawl/run`
 
-## Single Platform Request
+## Single Platform Request (`POST /crawl/platform/:platform`)
 
 ```json
 {
@@ -52,7 +52,32 @@ Later, they can be re-enabled with compliant integrations:
 }
 ```
 
-## Multi Platform Request
+## Default Run Input Example (`POST /crawl/run`)
+
+If `platforms` is omitted, the API automatically runs `["web", "news"]`.
+
+```json
+{
+  "runId": "run-coke-default-001",
+  "product": {
+    "productName": "Coca-Cola",
+    "aliases": ["Coke", "Diet Coke"],
+    "keywords": ["cola drink", "soft drink taste"]
+  },
+  "optionsByPlatform": {
+    "web": {
+      "maxItems": 80,
+      "locale": "en-US"
+    },
+    "news": {
+      "maxItems": 60,
+      "durationHours": 24
+    }
+  }
+}
+```
+
+## Multi Platform Request (`POST /crawl/run`)
 
 ```json
 {

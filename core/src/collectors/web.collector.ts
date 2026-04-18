@@ -41,6 +41,7 @@ export class WebCollector extends BaseCollector {
       requestQueue: queue,
       maxRequestsPerCrawl: this.maxRequests(task),
       requestHandlerTimeoutSecs: 45,
+      preNavigationHooks: this.getCheerioPreNavigationHooks(),
       requestHandler: async ({ $, request, enqueueLinks }) => {
         const pageType = String(request.userData.pageType ?? "seed");
         if (pageType === "search") {

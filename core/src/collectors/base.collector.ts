@@ -86,6 +86,26 @@ export abstract class BaseCollector {
     };
   }
 
+  protected getCheerioPreNavigationHooks(): Array<(context: unknown, gotOptions: unknown) => Promise<void>> {
+    return [
+      async (_context, gotOptions) => {
+        const options = gotOptions as Record<string, unknown>;
+
+        // Bun + got-scraping can fail TLS negotiation with generated cipher lists.
+        options.http2 = false;
+        options.useHeaderGenerator = false;
+        delete options.ciphers;
+
+        const https =
+          typeof options.https === "object" && options.https !== null
+            ? ({ ...(options.https as Record<string, unknown>) } as Record<string, unknown>)
+            : {};
+        delete https.ciphers;
+        options.https = https;
+      },
+    ];
+  }
+
   private dedupeItems(items: RawFeedbackItem[]): RawFeedbackItem[] {
     const unique = new Map<string, RawFeedbackItem>();
     for (const item of items) {

@@ -29,6 +29,7 @@ export class NewsCollector extends BaseCollector {
       requestQueue: queue,
       maxRequestsPerCrawl: this.maxRequests(task),
       requestHandlerTimeoutSecs: 45,
+      preNavigationHooks: this.getCheerioPreNavigationHooks(),
       requestHandler: async ({ $, request }) => {
         const cards = $("article");
         if (cards.length === 0) {
