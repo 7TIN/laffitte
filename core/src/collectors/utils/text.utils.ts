@@ -70,13 +70,18 @@ function parseRelativeTimeToMs(value: string): number | undefined {
     return undefined;
   }
 
-  const amount = Number.parseInt(match[1], 10);
+  const amountRaw = match[1];
+  const unitRaw = match[2];
+  if (!amountRaw || !unitRaw) {
+    return undefined;
+  }
+
+  const amount = Number.parseInt(amountRaw, 10);
   if (Number.isNaN(amount) || amount <= 0) {
     return undefined;
   }
 
-  const unit = match[2];
-  const multipliers: Record<string, number> = {
+  const multipliers = {
     second: 1_000,
     minute: 60_000,
     hour: 3_600_000,
@@ -84,9 +89,13 @@ function parseRelativeTimeToMs(value: string): number | undefined {
     week: 604_800_000,
     month: 2_592_000_000,
     year: 31_536_000_000,
-  };
+  } as const;
 
-  const multiplier = multipliers[unit];
+  if (!(unitRaw in multipliers)) {
+    return undefined;
+  }
+
+  const multiplier = multipliers[unitRaw as keyof typeof multipliers];
   if (!multiplier) {
     return undefined;
   }

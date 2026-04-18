@@ -17,8 +17,12 @@ Notes:
 - `instagram` (hashtag/profile feeds + post comments)
 - `amazon` (search + review pages)
 
-`twitter` is intentionally disabled by default because unauthenticated crawling is login-gated on X.
-Later, it can be re-enabled with paid API/integration (`ENABLE_TWITTER=true`).
+`twitter` and `reddit` are intentionally disabled by default because unauthenticated social crawling is frequently login-gated or rate-limited.
+Later, they can be re-enabled with compliant integrations:
+- `ENABLE_TWITTER=true`
+- `ENABLE_REDDIT=true`
+
+`POST /crawl/run` defaults to `["web", "news"]` when `platforms` is omitted, so the system can continue on crawl-friendly blog/article/news sources.
 
 ## API Endpoints
 
@@ -58,18 +62,17 @@ Later, it can be re-enabled with paid API/integration (`ENABLE_TWITTER=true`).
     "aliases": ["Coke", "Diet Coke"],
     "hashtags": ["#CocaCola"]
   },
-  "platforms": ["reddit", "youtube", "news", "instagram"],
+  "platforms": ["web", "news", "amazon"],
   "optionsByPlatform": {
-    "reddit": {
+    "web": {
       "maxItems": 80
     },
     "news": {
       "locale": "en-US",
       "maxItems": 60
     },
-    "instagram": {
-      "maxItems": 80,
-      "maxScrollSteps": 8
+    "amazon": {
+      "maxItems": 80
     }
   }
 }

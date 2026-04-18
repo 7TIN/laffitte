@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 
-import { listDisabledPlatforms, listPlatforms } from "../collectors/index.ts";
+import {
+  listAllPlatforms,
+  listDefaultPlatforms,
+  listDisabledPlatforms,
+  listPlatforms,
+} from "../collectors/index.ts";
 import { CollectorOrchestrator } from "../orchestrator/collector.orchestrator.ts";
 import type {
   CollectorOptions,
@@ -16,16 +21,28 @@ crawlRoutes.get("/platforms", (c) => {
   return c.json({
     platforms: listPlatforms(),
     disabledPlatforms: listDisabledPlatforms(),
+    defaultPlatforms: listDefaultPlatforms(),
   });
 });
 
 crawlRoutes.post("/platform/:platform", async (c) => {
   const platform = c.req.param("platform");
-  if (!isPlatform(platform)) {
+  if (!isKnownPlatform(platform)) {
     return c.json(
       {
         error: `unsupported platform "${platform}"`,
+        supportedPlatforms: listAllPlatforms(),
+      },
+      400,
+    );
+  }
+
+  if (!isPlatform(platform)) {
+    return c.json(
+      {
+        error: `platform "${platform}" is currently disabled`,
         supportedPlatforms: listPlatforms(),
+        disabledPlatforms: listDisabledPlatforms(),
       },
       400,
     );
@@ -56,12 +73,13 @@ crawlRoutes.post("/run", async (c) => {
 
   const product = parseProductSeed(body.product ?? body) ?? {};
 
-  const platforms = parsePlatforms(body.platforms);
+  const platforms = hasOwn(body, "platforms") ? parsePlatforms(body.platforms) : listDefaultPlatforms();
   if (platforms.length === 0) {
     return c.json(
       {
-        error: "body.platforms must include at least one supported platform",
+        error: "body.platforms must include at least one enabled platform",
         supportedPlatforms: listPlatforms(),
+        defaultPlatforms: listDefaultPlatforms(),
       },
       400,
     );
@@ -81,6 +99,10 @@ crawlRoutes.post("/run", async (c) => {
 
 function isPlatform(value: string): value is Platform {
   return listPlatforms().includes(value as Platform);
+}
+
+function isKnownPlatform(value: string): value is Platform {
+  return listAllPlatforms().includes(value as Platform);
 }
 
 function parsePlatforms(value: unknown): Platform[] {
@@ -177,6 +199,10 @@ function asStringArray(value: unknown): string[] | undefined {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
 }
 
 async function safeJsonBody(c: { req: { json: () => Promise<unknown> } }): Promise<Record<string, unknown> | null> {

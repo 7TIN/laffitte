@@ -18,33 +18,63 @@ const collectorMap: Record<Platform, BaseCollector> = {
   amazon: new AmazonCollector(),
 };
 
+const defaultPlatforms: Platform[] = ["web", "news"];
+
 function isTwitterEnabled(): boolean {
   return process.env.ENABLE_TWITTER === "true";
 }
 
-export function getCollector(platform: Platform): BaseCollector {
+function isRedditEnabled(): boolean {
+  return process.env.ENABLE_REDDIT === "true";
+}
+
+function isPlatformEnabled(platform: Platform): boolean {
+  if (platform === "twitter") {
+    return isTwitterEnabled();
+  }
+
+  if (platform === "reddit") {
+    return isRedditEnabled();
+  }
+
+  return true;
+}
+
+function disabledReason(platform: Platform): string | null {
   if (platform === "twitter" && !isTwitterEnabled()) {
-    throw new Error(
-      'twitter collector is disabled by default (X login wall). Set ENABLE_TWITTER=true only if you are using official API/integration.',
-    );
+    return 'twitter collector is disabled by default (X login wall). Set ENABLE_TWITTER=true only if you are using official API/integration.';
+  }
+
+  if (platform === "reddit" && !isRedditEnabled()) {
+    return "reddit collector is disabled by default because public crawling is frequently blocked/rate-limited. Set ENABLE_REDDIT=true only if you have a compliant integration.";
+  }
+
+  return null;
+}
+
+export function getCollector(platform: Platform): BaseCollector {
+  const reason = disabledReason(platform);
+  if (reason) {
+    throw new Error(reason);
   }
 
   return collectorMap[platform];
 }
 
+export function listAllPlatforms(): Platform[] {
+  return Object.keys(collectorMap) as Platform[];
+}
+
 export function listPlatforms(): Platform[] {
-  return (Object.keys(collectorMap) as Platform[]).filter(
-    (platform) => platform !== "twitter" || isTwitterEnabled(),
-  );
+  return listAllPlatforms().filter((platform) => isPlatformEnabled(platform));
+}
+
+export function listDefaultPlatforms(): Platform[] {
+  return defaultPlatforms.filter((platform) => isPlatformEnabled(platform));
 }
 
 export function listDisabledPlatforms(): Platform[] {
-  const disabled: Platform[] = [];
-  if (!isTwitterEnabled()) {
-    disabled.push("twitter");
-  }
-
-  return disabled;
+  return listAllPlatforms().filter((platform) => !isPlatformEnabled(platform));
 }
 
 export {
